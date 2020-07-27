@@ -1,12 +1,11 @@
 import datetime as dt
+import os
 import time
 from functools import partial
 from typing import Generator
 import pytest
 from db import DataBase, DBField, DBTable, SelectionCriteria
 from pathlib import Path
-import os
-
 # from dataclasses_json import dataclass_json
 
 DB_ROOT = Path('db_files')
@@ -132,8 +131,8 @@ def test_performance(new_db: DataBase) -> None:
     insert_start = time.time()
     students = create_students_table(new_db, num_records)
     insert_stop = time.time()
-    size_100 = db_size()
-  #  assert 0 < size_100 < 1_000_000
+    # size_100 = db_size()
+    # assert 0 < size_100 < 1_000_000
     assert insert_stop - insert_start < 20
 
     delete_start = time.time()
@@ -149,6 +148,9 @@ def test_bad_key(new_db: DataBase) -> None:
 
 
 db = DataBase()
+test_create(db)
 test_performance(db)
-
-os.remove("my_db.json")
+test_update(db)
+test_50_students(db)
+test_bad_key(db)
+os.remove('my_db.json')
