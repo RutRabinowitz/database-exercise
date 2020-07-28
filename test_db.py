@@ -109,6 +109,7 @@ def test_update(new_db: DataBase) -> None:
 
 def test_50_students(new_db: DataBase) -> None:
     students = create_students_table(new_db, num_students=50)
+    students.create_index("First")
     assert students.count() == 50
     students.delete_record(1_000_001)
     students.delete_records([SelectionCriteria('ID', '=', 1_000_020)])
@@ -127,12 +128,12 @@ def test_50_students(new_db: DataBase) -> None:
 
 def test_performance(new_db: DataBase) -> None:
     num_records = 200
-    assert db_size() == 0
+    assert db_size() == 2  # TODO: changes from 0 to 2
     insert_start = time.time()
     students = create_students_table(new_db, num_records)
     insert_stop = time.time()
-    # size_100 = db_size()
-    # assert 0 < size_100 < 1_000_000
+    size_100 = db_size()
+    assert 0 < size_100 < 1_000_000
     assert insert_stop - insert_start < 20
 
     delete_start = time.time()
@@ -147,10 +148,4 @@ def test_bad_key(new_db: DataBase) -> None:
         _ = new_db.create_table('Students', STUDENT_FIELDS, 'BAD_KEY')
 
 
-db = DataBase()
-test_create(db)
-test_performance(db)
-test_update(db)
-test_50_students(db)
-test_bad_key(db)
-os.remove('my_db.json')
+

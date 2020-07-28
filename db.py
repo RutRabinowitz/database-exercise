@@ -1,3 +1,4 @@
+import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,17 +56,18 @@ class DBTable(db_api.DBTable):
     def __init__(self, name, fields, key_field_name):
         self.name = name
         self.fields = fields
+        self.indexes_fields = []
 
         if key_field_name in self.get_fields_name():
             self.key_field_name = key_field_name
-            with open(self.get_file_name(), 'w') as file:
+            self.indexes_fields.append(key_field_name)
+            with open(f'db_files/{self.name}.json', 'w') as file:
                 json.dump({}, file)
-            return
         else:
             raise ValueError  # Primary key Error...
 
     def count(self) -> int:
-        with open(self.name + '.json', 'r') as json_file:
+        with open(f'db_files/{self.name}.json', 'r') as json_file:
             return len(json.load(json_file))
 
     def insert_record(self, values: Dict[str, Any]) -> None:
@@ -121,20 +123,25 @@ class DBTable(db_api.DBTable):
         return result
 
     def create_index(self, field_to_index: str) -> None:
-        if field_to_index in self.fields and field_to_index != self.key_field_name:
-            self.bplustree = b_tree.BPlusTree(order=9)
+        if field_to_index in self.get_fields_name() and field_to_index != self.key_field_name:
+            b_plus_tree = b_tree.BPlusTree(order=9)
             records = self.get_all_records()
+            idx = self.get_fields_name().index(field_to_index) - 1
             for record in records:
-                pass
+                (records[record].append(record))
+                key = records[record].pop(idx)
+                b_plus_tree.insert(key, records[record])
+            open(f'db_files/{field_to_index}.txt', 'w')
+            b_plus_tree.write_to_txt(field_to_index)
 
     def get_file_name(self):
-        return self.name + ".json"
+        return f'db_files/{self.name}.json'
 
     def get_fields_name(self):
         return [field_name.name for field_name in self.fields]
 
     def write_to_file(self, records_dict):
-        with open(self.get_file_name(), 'w') as json_file:
+        with open(f'db_files/{self.name}.json', 'w') as json_file:
             json.dump(records_dict, json_file)
 
     def get_updated_record(self, values: Dict[str, Any], record):
@@ -201,13 +208,13 @@ class DBTable(db_api.DBTable):
         return records_to_delete
 
     def get_all_records(self):
-        with open(self.name + ".json", 'r') as json_file:
+        with open(f'db_files/{self.name}.json', 'r') as json_file:
             json_data = json.load(json_file)
         return json_data
 
 
 def write(file_name, data):
-    with open(file_name, 'w') as json_file:
+    with open(f'db_files/{file_name}', 'w') as json_file:
         json.dump(data, json_file)
 
 
@@ -223,8 +230,8 @@ class DataBase(db_api.DataBase):
     def __init__(self):
         self.name = "my_db"
         self.file_name = "my_db.json"
-        if not os.path.isfile(self.file_name):
-            with open(self.file_name, 'w') as file:
+        if not os.path.isfile(f'db_files/{self.file_name}'):
+            with open(f'db_files/{self.file_name}', 'w') as file:
                 json.dump({}, file)
 
     def create_table(self,
@@ -232,16 +239,16 @@ class DataBase(db_api.DataBase):
                      fields: List[DBField],
                      key_field_name: str):
 
-        new_db = DBTable(table_name, fields, key_field_name)
+        new_table = DBTable(table_name, fields, key_field_name)
 
-        with open(self.file_name, 'r') as json_file:
+        with open(f'db_files/{self.file_name}', 'r') as json_file:
             tables_name = json.load(json_file)
             # if table_name in tables_name:
             #     raise KeyError('BAD_KEY')
 
             tables_name[table_name] = [[field.name for field in fields], key_field_name, table_name + ".json"]
             write(self.file_name, tables_name)
-        return new_db
+        return new_table
 
     def num_tables(self) -> int:
         return len(self.get_tables_data())
@@ -259,7 +266,7 @@ class DataBase(db_api.DataBase):
         tables_name = self.get_tables_data()
         if table_name in tables_name:
             del tables_name[table_name]
-            os.remove(table_name + ".json")
+            os.remove(f'db_files/{table_name}.json')
         write(self.file_name, tables_name)
 
     def get_tables_names(self) -> List[Any]:
@@ -274,5 +281,5 @@ class DataBase(db_api.DataBase):
         raise NotImplementedError
 
     def get_tables_data(self):
-        with open(self.file_name, "r") as json_file:
+        with open(f'db_files/{self.file_name}', "r") as json_file:
             return json.load(json_file)

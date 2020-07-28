@@ -76,6 +76,18 @@ class Node(object):
             for item in self.values:
                 item.show(counter + 1)
 
+    def write_to_txt(self, field_to_index, counter=0):
+        """Prints the keys at each level."""
+        with open(f'db_files/{field_to_index}.txt', 'a') as txt_file:
+            txt_file.write(str(counter) + str(self.keys) + "\n")
+
+        if not self.leaf:
+            for item in self.values:
+                with open(f'db_files/{field_to_index}.txt', 'a') as txt_file:
+                    txt_file.write(str(item.values))
+                item.write_to_txt(field_to_index, counter + 1)
+
+
 
 class BPlusTree(object):
     """B+ tree object, consisting of nodes.
@@ -155,6 +167,8 @@ class BPlusTree(object):
         """Prints the keys at each level."""
         self.root.show()
 
+    def write_to_txt(self, field_to_index):
+        self.root.write_to_txt(field_to_index)
 
 def demo_node():
     print('Initializing node...')
